@@ -212,7 +212,8 @@ public class Node {
 	}
 	
 	public Set<Key> allLocalIDs() {
-		return usedIDs.keySet();
+		// Sidestep covariance in J8, which returns KeySetView instead of Set.  Needed for Android
+		return ((Map) usedIDs).keySet();
 	}
 	
 	public DHT getDHT() {
