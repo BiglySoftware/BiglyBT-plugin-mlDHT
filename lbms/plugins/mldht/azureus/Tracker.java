@@ -21,6 +21,7 @@ import java.util.concurrent.DelayQueue;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 
 import lbms.plugins.mldht.kad.*;
 import lbms.plugins.mldht.kad.DHT.DHTtype;
@@ -29,7 +30,9 @@ import lbms.plugins.mldht.kad.tasks.Task;
 import lbms.plugins.mldht.kad.tasks.TaskListener;
 
 import com.biglybt.core.util.AERunnable;
+import com.biglybt.core.util.AEThread2;
 import com.biglybt.core.util.AsyncDispatcher;
+import com.biglybt.core.util.FrequencyLimitedDispatcher;
 import com.biglybt.pif.download.Download;
 import com.biglybt.pif.download.DownloadAnnounceResult;
 import com.biglybt.pif.download.DownloadAttributeListener;
@@ -96,7 +99,7 @@ public class Tracker {
 			return;
 		}
 		DHT.logInfo("Tracker: starting...");
-		timer = DHT.getScheduler().scheduleAtFixedRate(new Runnable() {
+		timer = DHT.getDefaultScheduler().scheduleAtFixedRate(new Runnable() {
 			@Override
 			public void run () {
 				checkQueues();
@@ -162,28 +165,54 @@ public class Tracker {
 			new TaskListener() {
 				Set<PeerAddressDBItem> items = new HashSet<PeerAddressDBItem>();
 				ScrapeResponseHandler scrapeHandler = new ScrapeResponseHandler();
-				AnnounceResponseHandler announceHandler = 
+				final boolean[] done = {false};
+				final boolean[] interiming = {false};
+				
+				BiConsumer<KBucketEntry,PeerAddressDBItem> announceHandler = 
 					(scrapeOnly||tor==null||tor.getAnnounceCount()>1)?
 					null:
-					new AnnounceResponseHandler()
+					new BiConsumer<KBucketEntry,PeerAddressDBItem>()
 					{
 						private Set<PeerAddressDBItem> interim_items = new HashSet<PeerAddressDBItem>();
 						
 						@Override
 						public void
-						itemsUpdated(
-							PeerLookupTask	task )
+						accept(
+							KBucketEntry 		entry,
+							PeerAddressDBItem 	item )
 						{
 							if ( interim_items.size() >= 200 ){
 								
 								return;
 							}
 							
-							interim_items.addAll( task.getReturnedItems());
+							interim_items.add( item );
 							
-							DHTAnnounceResult res = new DHTAnnounceResult( dl, interim_items, 0);
-							
-							dl.setAnnounceResult(res);
+							synchronized( interiming ) {
+								if ( !( interiming[0] || done[0] )) {
+									interiming[0] = true;
+									new AEThread2("mlDHT:interim" )
+									{
+										public void
+										run()
+										{
+											try {
+												Thread.sleep(50);
+											}catch( Throwable e ) {
+												
+											}
+											synchronized( interiming ) {
+												if ( !done[0] ) {
+													interiming[0] = false;
+													DHTAnnounceResult res = new DHTAnnounceResult( dl, interim_items, 0);
+													
+													dl.setAnnounceResult(res);
+												}
+											}
+										}
+									}.start();
+								}
+							}
 						}
 					};
 				
@@ -199,8 +228,8 @@ public class Tracker {
 						if (lookupTask != null) {
 							pendingCount.incrementAndGet();
 							lookupTask.setScrapeHandler(scrapeHandler);
-							lookupTask.setAnounceHandler(announceHandler);
-							lookupTask.setScrapeOnly(scrapeOnly);
+							lookupTask.setResultHandler(announceHandler);
+							lookupTask.setNoAnnounce(scrapeOnly);
 							lookupTask.addListener(this);
 							lookupTask.setInfo(dl.getName());
 							lookupTask.setNoSeeds(dl.isComplete(true));
@@ -213,6 +242,9 @@ public class Tracker {
 				@Override
 				public void finished(Task t) {
 					DHT.logDebug("DHT Task done: " + t.getClass().getSimpleName());
+					synchronized( interiming ) {
+						done[0] = true;
+					}
 					if (t instanceof PeerLookupTask) {
 						PeerLookupTask peerLookup = (PeerLookupTask) t;
 						synchronized (items)

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="WINDOWS-1252" standalone="no"?>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <jardesc>
     <jar path="mlDHT/mlDHT.jar"/>
     <options buildIfNeeded="true" compress="true" descriptionLocation="/mlDHT/mlDHT.jardesc" exportErrors="true" exportWarnings="true" includeDirectoryEntries="false" overwrite="false" saveDescription="true" storeRefactorings="false" useSourceFolders="false"/>
@@ -12,13 +12,11 @@
     </manifest>
     <selectedElements exportClassFiles="true" exportJavaFiles="true" exportOutputFolder="false">
         <file path="/mlDHT/plugin.properties"/>
-        <javaElement handleIdentifier="=mlDHT/&lt;lbms.plugins.mldht.kad.utils"/>
-        <javaElement handleIdentifier="=mlDHT/&lt;lbms.plugins.mldht.kad.messages"/>
         <file path="/mlDHT/gpl-2.0.txt"/>
+        <javaElement handleIdentifier="=the8472_mldht/src"/>
         <javaElement handleIdentifier="=mlDHT/&lt;lbms.plugins.mldht"/>
-        <javaElement handleIdentifier="=mlDHT/&lt;lbms.plugins.mldht.kad.tasks"/>
         <javaElement handleIdentifier="=mlDHT/&lt;lbms.plugins.mldht.azureus.gui"/>
-        <javaElement handleIdentifier="=mlDHT/&lt;lbms.plugins.mldht.kad"/>
         <javaElement handleIdentifier="=mlDHT/&lt;lbms.plugins.mldht.azureus"/>
+        <javaElement handleIdentifier="=ed25519-java/src"/>
     </selectedElements>
 </jardesc>

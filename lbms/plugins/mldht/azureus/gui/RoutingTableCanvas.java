@@ -18,6 +18,7 @@ package lbms.plugins.mldht.azureus.gui;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
@@ -25,6 +26,7 @@ import java.util.regex.Pattern;
 
 import lbms.plugins.mldht.kad.*;
 import lbms.plugins.mldht.kad.Node.RoutingTableEntry;
+import the8472.bencode.Utils;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.ScrolledComposite;
@@ -222,7 +224,7 @@ public class RoutingTableCanvas {
 	private String getTooltipForPoint (int x, int y) {
 		
 		int nthBucket = x / bucketXOffset;
-		List<RoutingTableEntry> entries = routingTable.getBuckets();
+		List<RoutingTableEntry> entries = routingTable.table().list();
 		if ( nthBucket >= entries.size()){
 			return( null);
 		}
@@ -252,19 +254,19 @@ public class RoutingTableCanvas {
 		
 		KBucketEntry bucketEntry = bucket.get(peerNum);
 		
-		String ver = bucketEntry.getVersion();
-		if(ver == null || ver.length() < 4)
+		String ver;
+		if( !bucketEntry.getVersion().isPresent()) {
 			ver = "";
-		else
-		{
-			try
-			{
-				byte[] raw = ver.getBytes("ISO-8859-1");
-				ver = ver.substring(0, 2) + " " + ( (raw[2] & 0xFF) << 8 | (raw[3] & 0xFF));
-			} catch (UnsupportedEncodingException e1)
-			{
-				e1.printStackTrace();
-			}				
+		}else{
+			ByteBuffer bb = bucketEntry.getVersion().get();
+			//try
+			//{
+				byte[] raw = bb.array();
+				ver = Utils.prettyPrint(raw);
+			//} catch (UnsupportedEncodingException e1)
+			//{
+			//	e1.printStackTrace();
+			//}				
 		}
 		
 
@@ -317,7 +319,7 @@ public class RoutingTableCanvas {
 	private void printPeers (GC gc) {
 
 		
-		List<RoutingTableEntry> buckets = routingTable.getBuckets(); 
+		List<RoutingTableEntry> buckets = routingTable.table().list(); 
 		
 		
 		for (int i = 0; i < buckets.size(); i++) {

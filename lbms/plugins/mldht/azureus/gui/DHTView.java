@@ -27,6 +27,9 @@ import lbms.plugins.mldht.kad.messages.MessageBase.Method;
 import lbms.plugins.mldht.kad.messages.MessageBase.Type;
 import lbms.plugins.mldht.kad.tasks.*;
 
+import java.time.Duration;
+import java.time.Instant;
+
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.ScrolledComposite;
 import org.eclipse.swt.events.ControlAdapter;
@@ -160,8 +163,7 @@ public class DHTView implements UISWTViewEventListener {
 									.formatByteCountToKiBEtcPerSec(rpc
 											.getSentBytesPerSec()));
 
-							long uptimeSec = (System.currentTimeMillis() - stats
-									.getStartedTimestamp()) / 1000;
+							long uptimeSec = Duration.between(stats.getStartedTimestamp(), Instant.now()).getSeconds();
 							if (uptimeSec == 0) {
 								uptimeSec = 1;
 							}
@@ -611,7 +613,7 @@ public class DHTView implements UISWTViewEventListener {
 						return;
 					}
 					if (t instanceof PeerLookupTask) {
-						item.setText(0, ((PeerLookupTask) t).isScrapeOnly() ? "Scrape" : "Get Peers");
+						item.setText(0, !((PeerLookupTask) t).isNoAnnounce() ? "Scrape" : "Get Peers");
 					} else if (t instanceof AnnounceTask) {
 						item.setText(0, "Announce");
 					} else if (t instanceof NodeLookup) {
@@ -628,12 +630,17 @@ public class DHTView implements UISWTViewEventListener {
 						item.setText(1, "Active");
 					}
 
-					if (t.getTargetKey() != null) {
-						item.setText(2, t.getTargetKey().toString());
+					String key;
+					
+					if (t instanceof PeerLookupTask ) {
+						key = ((PeerLookupTask)t).getTargetKey().toString(true);
+					}else if (t instanceof AnnounceTask ) {
+							key = ((AnnounceTask)t).getTargetKey().toString(true);
 					} else {
-						item.setText(2, "No Key");
+						key = "No Key";
 					}
-
+					
+					item.setText( 2, key );
 					item.setText(3, t.getNumOutstandingRequestsExcludingStalled() + " ("
 							+ t.getNumOutstandingRequests() + ")");
 					

@@ -17,18 +17,29 @@
 package lbms.plugins.mldht.azureus;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NoRouteToHostException;
 import java.net.SocketException;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 import lbms.plugins.mldht.DHTConfiguration;
 import lbms.plugins.mldht.kad.DHT;
 import lbms.plugins.mldht.kad.DHTConstants;
 import lbms.plugins.mldht.kad.DHTLogger;
 import lbms.plugins.mldht.kad.DHT.DHTtype;
+import lbms.plugins.mldht.kad.DHT.LogLevel;
 import lbms.plugins.mldht.kad.RPCServer;
 import lbms.plugins.mldht.kad.RPCServerListener;
 
@@ -177,8 +188,20 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 			parsedVersion = Integer.parseInt(version);
 		}
 
+		dhts = new HashMap<DHT.DHTtype, DHT>();
+		
 		DHTConstants.setVersion(parsedVersion);
-		dhts = DHT.createDHTs();
+		
+		Arrays.asList(DHT.DHTtype.values()).stream().forEach(type -> {
+			dhts.put(type, new DHT(type));
+		});
+		
+		List<DHT> listDHTs = new ArrayList<>( dhts.values());
+				
+		listDHTs.forEach(d -> {
+			d.addSiblings(listDHTs);
+			//d.setScheduler(scheduler);
+		});
 
 		DHT.setLogger(new DHTLogger() {
 			/*
@@ -187,7 +210,7 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 			 * @see lbms.plugins.mldht.kad.DHTLogger#log(java.lang.String)
 			 */
 			@Override
-			public void log (String message) {
+			public void log (String message, LogLevel l ) {
 				logChannel.log(message);
 			}
 
@@ -197,8 +220,12 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 			 * @see lbms.plugins.mldht.kad.DHTLogger#log(java.lang.Exception)
 			 */
 			@Override
-			public void log (Throwable e) {
-				logChannel.log(e);
+			public void log (Throwable e, LogLevel l ) {
+				if ( e instanceof IOException ) {
+					
+				}else{
+					logChannel.log(e);
+				}
 			}
 		});
 
@@ -450,7 +477,7 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 			logChannel.removeListener(logListener);
 		}
 			
-		DHT.initStatics();	// reset in case plugin class isn't unloaded (happend when bundled)
+		//DHT.initStatics();	// reset in case plugin class isn't unloaded (happend when bundled)
 		
 		dhts 		= null;
 		
@@ -541,8 +568,8 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 						}
 
 						@Override
-						public File getNodeCachePath() {
-							return pluginInterface.getPluginconfig().getPluginUserFile("dht.cache");
+						public Path getStoragePath() {
+							return pluginInterface.getPluginconfig().getPluginUserFile("tmp.tmp").getParentFile().toPath();
 						}
 
 						@Override
@@ -553,6 +580,45 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 						@Override
 						public boolean allowMultiHoming() {
 							return pluginInterface.getPluginconfig().getPluginBooleanParameter("multihoming");
+						}
+						
+						public Predicate<InetAddress> filterBindAddress() {
+							return( new Predicate<InetAddress>() {
+								@Override
+								public boolean test(InetAddress t) {
+									InetAddress[] allBindAddresses = NetworkAdmin.getSingleton().getAllBindAddresses(true);
+								
+									boolean	result = false;
+									
+										// when there are no bindings 'all bind addresses' doesn't return both v4+v6 any addresses, it just returns one
+										// currently match both to this, if a user requires,
+									if ( t.isAnyLocalAddress()){
+										for ( InetAddress a: allBindAddresses ) {
+											if ( a.isAnyLocalAddress()) {
+												result = true;
+												break;
+											}
+										}
+									}else {
+										for ( InetAddress a: allBindAddresses ) {
+											if ( a.equals( t )) {
+												
+												result = true;
+												break;
+											}
+										}
+									}
+									/*
+									String curr = "";
+									for ( InetAddress a: allBindAddresses ) {
+										curr += (curr == ""?"":",") + a;
+										
+									}
+									System.out.println( "PREDICATE: " + t+ " - " + curr + " -> " + result );
+									*/
+									return( result );
+								}
+							});
 						}
 					}; 
 
@@ -647,10 +713,7 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 	@Override
 	public void propertyChanged(String property) {
 		for (DHT dht : dhts.values()) {
-			List<RPCServer> servers = dht.getServers();
-			for (RPCServer server: servers) {
-				server.closeSocket();
-			}
+			dht.getServerManager().doBindChecks();
 		}
 	}
 }
