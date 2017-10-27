@@ -1,30 +1,25 @@
 /*
- *    This file is part of mlDHT. 
+ *    This file is part of mlDHT.
  * 
- *    mlDHT is free software: you can redistribute it and/or modify 
- *    it under the terms of the GNU General Public License as published by 
- *    the Free Software Foundation, either version 2 of the License, or 
- *    (at your option) any later version. 
+ *    mlDHT is free software: you can redistribute it and/or modify
+ *    it under the terms of the GNU General Public License as published by
+ *    the Free Software Foundation, either version 2 of the License, or
+ *    (at your option) any later version.
  * 
- *    mlDHT is distributed in the hope that it will be useful, 
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of 
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
- *    GNU General Public License for more details. 
+ *    mlDHT is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *    GNU General Public License for more details.
  * 
- *    You should have received a copy of the GNU General Public License 
- *    along with mlDHT.  If not, see <http://www.gnu.org/licenses/>. 
+ *    You should have received a copy of the GNU General Public License
+ *    along with mlDHT.  If not, see <http://www.gnu.org/licenses/>.
  */
 package lbms.plugins.mldht.azureus;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.net.Inet4Address;
-import java.net.Inet6Address;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.NoRouteToHostException;
 import java.net.SocketException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -32,16 +27,20 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Predicate;
+
+import the8472.utils.concurrent.NonblockingScheduledExecutor;
 
 import lbms.plugins.mldht.DHTConfiguration;
 import lbms.plugins.mldht.kad.DHT;
 import lbms.plugins.mldht.kad.DHTConstants;
 import lbms.plugins.mldht.kad.DHTLogger;
 import lbms.plugins.mldht.kad.DHT.DHTtype;
+import lbms.plugins.mldht.kad.DHT.IncomingMessageListener;
 import lbms.plugins.mldht.kad.DHT.LogLevel;
-import lbms.plugins.mldht.kad.RPCServer;
-import lbms.plugins.mldht.kad.RPCServerListener;
+import lbms.plugins.mldht.kad.messages.MessageBase;
+import lbms.plugins.mldht.kad.messages.MessageBase.Type;
 
 import com.biglybt.core.util.AERunnable;
 import com.biglybt.core.util.AESemaphore;
@@ -84,6 +83,7 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 
 	private BasicPluginViewModel	view_model;
 	private Logger					logger;
+	ScheduledExecutorService		executor;
 	private LoggerChannel			logChannel;
 	private LoggerChannelListener	logListener;
 	private UIManagerListener		uiListener;
@@ -187,8 +187,17 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 			}
 			parsedVersion = Integer.parseInt(version);
 		}
+		
+		executor = new NonblockingScheduledExecutor("mldht plugin", 2, new Thread.UncaughtExceptionHandler() {
+			@Override
+			public void uncaughtException(Thread t, Throwable e) {
+				// TODO Auto-generated method stub
+				logChannel.log(e);
+			}
+		});
+	
 
-		dhts = new HashMap<DHT.DHTtype, DHT>();
+		dhts = new HashMap<>();
 		
 		DHTConstants.setVersion(parsedVersion);
 		
@@ -197,11 +206,28 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 		});
 		
 		List<DHT> listDHTs = new ArrayList<>( dhts.values());
+		
+		IncomingMessageListener responseListener = new IncomingMessageListener() {
+
+			@Override
+			public void received(DHT dht, MessageBase msg) {
+				if (msg.getType() != Type.RSP_MSG || alt_contact_handler == null)
+					return;
+
+				try {
+					alt_contact_handler.nodeAlive(msg.getOrigin());
+				} catch (Throwable e) {
+					Debug.out(e);
+				}
+			}
+		};
 				
 		listDHTs.forEach(d -> {
+			d.setScheduler(executor);
 			d.addSiblings(listDHTs);
-			//d.setScheduler(scheduler);
+			d.addIncomingMessageListener(responseListener);
 		});
+		
 
 		DHT.setLogger(new DHTLogger() {
 			/*
@@ -547,8 +573,8 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 			new AERunnable() {
 
 				@Override
-				public void 
-				runSupport() 
+				public void
+				runSupport()
 				{
 					if ( unloaded ){
 						return;
@@ -620,7 +646,7 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 								}
 							});
 						}
-					}; 
+					};
 
 					try{
 						alt_contact_handler = new AlternativeContactHandler();
@@ -628,32 +654,11 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 					}catch( Throwable e ){
 					}
 					
-					RPCServerListener serverListener = 
-							new RPCServerListener() {
-								@Override
-								public void 
-								replyReceived(
-									InetSocketAddress from_node) 
-								{
-									if ( alt_contact_handler != null ){
-									
-										try{
-											alt_contact_handler.nodeAlive( from_node );
-											
-										}catch( Throwable e ){
-											
-											Debug.out( e );
-										}
-									}
-								}
-							};
-							
+						
 					view_model.getStatus().setText("Initializing");
 					try {
 						for (Map.Entry<DHTtype, DHT> e : dhts.entrySet()) {
-							e.getValue().start(config, serverListener);
-
-							e.getValue().bootstrap();
+							e.getValue().start(config);
 						}
 
 						tracker.start();
@@ -673,8 +678,8 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 			new AERunnable() {
 				
 				@Override
-				public void 
-				runSupport() 
+				public void
+				runSupport()
 				{
 					try{
 						if ( tracker != null ){

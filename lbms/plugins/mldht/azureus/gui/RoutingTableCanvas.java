@@ -1,29 +1,23 @@
 /*
- *    This file is part of mlDHT. 
+ *    This file is part of mlDHT.
  * 
- *    mlDHT is free software: you can redistribute it and/or modify 
- *    it under the terms of the GNU General Public License as published by 
- *    the Free Software Foundation, either version 2 of the License, or 
- *    (at your option) any later version. 
+ *    mlDHT is free software: you can redistribute it and/or modify
+ *    it under the terms of the GNU General Public License as published by
+ *    the Free Software Foundation, either version 2 of the License, or
+ *    (at your option) any later version.
  * 
- *    mlDHT is distributed in the hope that it will be useful, 
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of 
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
- *    GNU General Public License for more details. 
+ *    mlDHT is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *    GNU General Public License for more details.
  * 
- *    You should have received a copy of the GNU General Public License 
- *    along with mlDHT.  If not, see <http://www.gnu.org/licenses/>. 
+ *    You should have received a copy of the GNU General Public License
+ *    along with mlDHT.  If not, see <http://www.gnu.org/licenses/>.
  */
 package lbms.plugins.mldht.azureus.gui;
 
-import java.io.UnsupportedEncodingException;
-import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.List;
-import java.util.regex.MatchResult;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import lbms.plugins.mldht.kad.*;
 import lbms.plugins.mldht.kad.Node.RoutingTableEntry;
 import the8472.bencode.Utils;
@@ -169,7 +163,7 @@ public class RoutingTableCanvas {
 		lineSpacing = x / 160;
 		peerWidth = lineSpacing - X_SPACING - X_SPACING - 1; //-1 to compensate the actual line width
 		
-		bucketContentWidth = DHTConstants.MAX_ENTRIES_PER_BUCKET * peerWidth + (DHTConstants.MAX_ENTRIES_PER_BUCKET -1) * X_SPACING; 
+		bucketContentWidth = DHTConstants.MAX_ENTRIES_PER_BUCKET * peerWidth + (DHTConstants.MAX_ENTRIES_PER_BUCKET -1) * X_SPACING;
 		bucketXOffset = bucketContentWidth;
 		bucketXOffset += 2* BUCKET_PADDING;
 		bucketXOffset += 2* BUCKET_BORDER_LINE_WIDTH;
@@ -266,7 +260,7 @@ public class RoutingTableCanvas {
 			//} catch (UnsupportedEncodingException e1)
 			//{
 			//	e1.printStackTrace();
-			//}				
+			//}
 		}
 		
 
@@ -319,14 +313,14 @@ public class RoutingTableCanvas {
 	private void printPeers (GC gc) {
 
 		
-		List<RoutingTableEntry> buckets = routingTable.table().list(); 
+		List<RoutingTableEntry> buckets = routingTable.table().list();
 		
 		
 		for (int i = 0; i < buckets.size(); i++) {
 			RoutingTableEntry rtEntry = buckets.get(i);
 			
 			int currentBucketOffsetX = i * bucketXOffset;
-			int currentBucketOffsetY = rtEntry.prefix.getDepth() * BUCKET_DEPTH_OFFSET; 
+			int currentBucketOffsetY = rtEntry.prefix.getDepth() * BUCKET_DEPTH_OFFSET;
 			
 			gc.setAlpha(255);
 			gc.drawRectangle(currentBucketOffsetX, currentBucketOffsetY , bucketContentWidth + 2* BUCKET_PADDING, 3 * PEER_HEIGHT);
@@ -337,11 +331,12 @@ public class RoutingTableCanvas {
 			List<KBucketEntry> entries = rtEntry.getBucket().getEntries();
 			for (int j = 0; j < entries.size(); j++) {
 				KBucketEntry e = entries.get(j);
-				if (e.isGood()) {
+				
+				if (e.eligibleForNodesList()) {
 					Color c = display.getSystemColor(SWT.COLOR_DARK_GREEN);
 					//gc.setForeground(c);
 					gc.setBackground(c);
-				} else if (e.isBad()) {
+				} else if (e.needsReplacement()) {
 					Color c = display.getSystemColor(SWT.COLOR_RED);
 					//gc.setForeground(c);
 					gc.setBackground(c);
@@ -366,11 +361,11 @@ public class RoutingTableCanvas {
 			entries = rtEntry.getBucket().getReplacementEntries();
 			for (int j = 0; j < entries.size(); j++) {
 				KBucketEntry e = entries.get(j);
-				if (e.isGood()) {
+				if (e.eligibleForLocalLookup()) {
 					Color c = display.getSystemColor(SWT.COLOR_DARK_GREEN);
 					//gc.setForeground(c);
 					gc.setBackground(c);
-				} else if (e.isBad()) {
+				} else if (e.needsReplacement()) {
 					Color c = display.getSystemColor(SWT.COLOR_RED);
 					//gc.setForeground(c);
 					gc.setBackground(c);
