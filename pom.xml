@@ -1,0 +1,129 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.biglybt</groupId>
+	<artifactId>biglybt-plugin-mldht</artifactId>
+	<version>2.2-SNAPSHOT</version>
+	<packaging>jar</packaging>
+	<name>BiglyBT - mlDHT plugin</name>
+
+	<url>http://www.biglybt.com</url>
+
+	<properties>
+		<project.build.sourceEncoding>utf-8</project.build.sourceEncoding>
+		<java.version>1.8</java.version>
+	</properties>
+
+	<prerequisites>
+		<maven>3.3.9</maven>
+	</prerequisites>
+
+	<scm>
+		<connection>scm:git:git@github.com:BiglySoftware/BiglyBT-plugin-mlDHT.git</connection>
+		<developerConnection>scm:git:git@github.com:BiglySoftware/BiglyBT-plugin-mlDHT.git</developerConnection>
+		<tag>master</tag>
+		<url>https://github.com/BiglySoftware/BiglyBT</url>
+	</scm>
+
+	<repositories>
+		<repository>
+			<id>jitpack.io</id>
+			<url>https://jitpack.io</url>
+		</repository>
+		<repository>
+			<id>maven-eclipse-repo</id>
+			<url>http://maven-eclipse.github.io/maven</url>
+		</repository>
+	</repositories>
+
+	<build>
+		<sourceDirectory>src</sourceDirectory>
+		<resources>
+			<resource>
+				<directory>src</directory>
+				<excludes>
+					<exclude>**/*.java</exclude>
+				</excludes>
+			</resource>
+		</resources>
+		<plugins>
+			<plugin>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.5.1</version>
+				<configuration>
+					<compilerId>javac</compilerId>
+					<source>1.8</source>
+					<target>1.8</target>
+				</configuration>
+				<dependencies>
+					<dependency>
+						<groupId>org.codehaus.plexus</groupId>
+						<artifactId>plexus-compiler-eclipse</artifactId>
+						<version>2.5</version>
+					</dependency>
+				</dependencies>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>3.0.0</version>
+				<configuration>
+					<archive>
+						<manifest>
+							<mainClass>the8472.mldht.Launcher</mainClass>
+						</manifest>
+					</archive>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>3.0.0</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>com.github.the8472</groupId>
+			<artifactId>mldht</artifactId>
+			<version>1a36b0b477</version>
+		</dependency>
+		<dependency>
+			<groupId>com.biglybt</groupId>
+			<artifactId>biglybt-core</artifactId>
+			<scope>provided</scope>
+			<version>1.0.2.1-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>com.biglybt</groupId>
+			<artifactId>biglybt-ui</artifactId>
+			<scope>provided</scope>
+			<version>1.0.2.1-SNAPSHOT</version>
+		</dependency>
+        <dependency>
+            <groupId>org.eclipse.swt</groupId>
+            <artifactId>org.eclipse.swt.win32.win32.x86</artifactId>
+            <version>4.6.1</version> <!-- 4.7M3 -->
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.swt</groupId>
+            <artifactId>org.eclipse.swt.cocoa.macosx.x86_64</artifactId>
+            <version>4.6.1</version> <!-- 4.7M3 -->
+            <scope>provided</scope>
+        </dependency>
+	</dependencies>
+
+	<issueManagement>
+		<system>github</system>
+		<url>https://github.com/BiglySoftware/BiglyBT-plugin-mldht</url>
+	</issueManagement>
+</project>
