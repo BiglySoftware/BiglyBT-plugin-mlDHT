@@ -6,3 +6,4 @@
 *.jar
 *.DS_Store
 .settings
+/target/
