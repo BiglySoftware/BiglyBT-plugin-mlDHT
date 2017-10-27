@@ -1,18 +1,18 @@
 /*
- *    This file is part of mlDHT. 
+ *    This file is part of mlDHT.
  * 
- *    mlDHT is free software: you can redistribute it and/or modify 
- *    it under the terms of the GNU General Public License as published by 
- *    the Free Software Foundation, either version 2 of the License, or 
- *    (at your option) any later version. 
+ *    mlDHT is free software: you can redistribute it and/or modify
+ *    it under the terms of the GNU General Public License as published by
+ *    the Free Software Foundation, either version 2 of the License, or
+ *    (at your option) any later version.
  * 
- *    mlDHT is distributed in the hope that it will be useful, 
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of 
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the 
- *    GNU General Public License for more details. 
+ *    mlDHT is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *    GNU General Public License for more details.
  * 
- *    You should have received a copy of the GNU General Public License 
- *    along with mlDHT.  If not, see <http://www.gnu.org/licenses/>. 
+ *    You should have received a copy of the GNU General Public License
+ *    along with mlDHT.  If not, see <http://www.gnu.org/licenses/>.
  */
 package lbms.plugins.mldht.azureus;
 
@@ -32,7 +32,6 @@ import lbms.plugins.mldht.kad.tasks.TaskListener;
 import com.biglybt.core.util.AERunnable;
 import com.biglybt.core.util.AEThread2;
 import com.biglybt.core.util.AsyncDispatcher;
-import com.biglybt.core.util.FrequencyLimitedDispatcher;
 import com.biglybt.pif.download.Download;
 import com.biglybt.pif.download.DownloadAnnounceResult;
 import com.biglybt.pif.download.DownloadAttributeListener;
@@ -66,8 +65,8 @@ public class Tracker {
 
 	public static final String				PEER_SOURCE_NAME			= "DHT"; // DownloadAnnounceResultPeer.PEERSOURCE_DHT;
 
-	private List<Download>					currentAnnounces			= new LinkedList<Download>();
-	private List<Download>					currentScrapes				= new LinkedList<Download>();
+	private List<Download>					currentAnnounces			= new LinkedList<>();
+	private List<Download>					currentScrapes				= new LinkedList<>();
 	private MlDHTPlugin						plugin;
 	private boolean							running;
 	private Random							random						= new Random();
@@ -78,10 +77,10 @@ public class Tracker {
 	
 	private ListenerBundle					listener					= new ListenerBundle();
 
-	private Map<Download, TrackedTorrent>	trackedTorrents				= new HashMap<Download, TrackedTorrent>();
+	private Map<Download, TrackedTorrent>	trackedTorrents				= new HashMap<>();
 	
-	private Queue<TrackedTorrent>			scrapeQueue					= new DelayQueue<TrackedTorrent>();
-	private Queue<TrackedTorrent>			announceQueue				= new DelayQueue<TrackedTorrent>();
+	private Queue<TrackedTorrent>			scrapeQueue					= new DelayQueue<>();
+	private Queue<TrackedTorrent>			announceQueue				= new DelayQueue<>();
 
 	private AsyncDispatcher	dispatcher = new AsyncDispatcher();
 	
@@ -99,7 +98,7 @@ public class Tracker {
 			return;
 		}
 		DHT.logInfo("Tracker: starting...");
-		timer = DHT.getDefaultScheduler().scheduleAtFixedRate(new Runnable() {
+		timer = plugin.executor.scheduleAtFixedRate(new Runnable() {
 			@Override
 			public void run () {
 				checkQueues();
@@ -163,17 +162,17 @@ public class Tracker {
 			
 			
 			new TaskListener() {
-				Set<PeerAddressDBItem> items = new HashSet<PeerAddressDBItem>();
+				Set<PeerAddressDBItem> items = new HashSet<>();
 				ScrapeResponseHandler scrapeHandler = new ScrapeResponseHandler();
 				final boolean[] done = {false};
 				final boolean[] interiming = {false};
 				
-				BiConsumer<KBucketEntry,PeerAddressDBItem> announceHandler = 
+				BiConsumer<KBucketEntry,PeerAddressDBItem> announceHandler =
 					(scrapeOnly||tor==null||tor.getAnnounceCount()>1)?
 					null:
 					new BiConsumer<KBucketEntry,PeerAddressDBItem>()
 					{
-						private Set<PeerAddressDBItem> interim_items = new HashSet<PeerAddressDBItem>();
+						private Set<PeerAddressDBItem> interim_items = new HashSet<>();
 						
 						@Override
 						public void
@@ -193,6 +192,7 @@ public class Tracker {
 									interiming[0] = true;
 									new AEThread2("mlDHT:interim" )
 									{
+										@Override
 										public void
 										run()
 										{
@@ -234,7 +234,7 @@ public class Tracker {
 							lookupTask.setInfo(dl.getName());
 							lookupTask.setNoSeeds(dl.isComplete(true));
 							dht.getTaskManager().addTask(lookupTask);
-						}	
+						}
 					}
 
 				}
@@ -263,7 +263,7 @@ public class Tracker {
 						if(pendingCount.decrementAndGet() > 0)
 							return;
 						allFinished(peerLookup.getInfoHash().getHash());
-					}					
+					}
 				}
 				
 				private void allFinished(byte[] hash)
@@ -369,7 +369,7 @@ public class Tracker {
 						{
 							@Override
 							public void
-							runSupport() 
+							runSupport()
 							{
 								announceDownload(dl);
 							}
@@ -389,7 +389,7 @@ public class Tracker {
 			{
 				@Override
 				public void
-				runSupport() 
+				runSupport()
 				{
 					checkQueuesSupport();
 				}
@@ -471,7 +471,7 @@ public class Tracker {
 						addTrackedTorrent(dl, "BackupTracker");
 					} else {
 						removeTrackedTorrent(dl, "BackupTracker no longer needed");
-					}	
+					}
 	
 					return;
 				}
@@ -485,7 +485,7 @@ public class Tracker {
 			DownloadScrapeResult scrResult = dl.getLastScrapeResult();
 			
 			if(	scrResult.getResponseType() == DownloadScrapeResult.RT_ERROR || (tor != null && scrResult.getScrapeStartTime() == tor.getLastAnnounceStart())) {
-				// faulty states or our own scrape => let's scrape again 
+				// faulty states or our own scrape => let's scrape again
 				addTrackedTorrent(dl, "BackupScraper");
 			} else {
 				// scrape seems fine => no need for DHT scrape
@@ -512,7 +512,7 @@ public class Tracker {
 		if (trackedTorrents.containsKey(dl)) {
 			DHT.logInfo("Tracker: stop tracking of Torrent reason: " + reason
 					+ ", Torrent; " + dl.getName());
-			TrackedTorrent tracked = trackedTorrents.get(dl); 
+			TrackedTorrent tracked = trackedTorrents.get(dl);
 			
 			announceQueue.remove(tracked);
 			scrapeQueue.remove(tracked);
@@ -522,7 +522,7 @@ public class Tracker {
 	}
 
 	public List<TrackedTorrent> getTrackedTorrentList () {
-		return new ArrayList<TrackedTorrent>(trackedTorrents.values());
+		return new ArrayList<>(trackedTorrents.values());
 	}
 
 
