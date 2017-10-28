@@ -87,6 +87,29 @@
 					</execution>
 				</executions>
 			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>3.1.0</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<filters>
+								<filter>
+									<artifact>com.github.the8472:mldht</artifact>
+								</filter>
+								<filter>
+									<artifact>net.i2p.crypto:eddsa</artifact>
+								</filter>
+							</filters>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
 	</build>
 
@@ -94,7 +117,7 @@
 		<dependency>
 			<groupId>com.github.the8472</groupId>
 			<artifactId>mldht</artifactId>
-			<version>1a36b0b477</version>
+			<version>067f434</version>
 		</dependency>
 		<dependency>
 			<groupId>com.biglybt</groupId>
@@ -108,18 +131,18 @@
 			<scope>provided</scope>
 			<version>1.0.2.1-SNAPSHOT</version>
 		</dependency>
-        <dependency>
-            <groupId>org.eclipse.swt</groupId>
-            <artifactId>org.eclipse.swt.win32.win32.x86</artifactId>
-            <version>4.6.1</version> <!-- 4.7M3 -->
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.swt</groupId>
-            <artifactId>org.eclipse.swt.cocoa.macosx.x86_64</artifactId>
-            <version>4.6.1</version> <!-- 4.7M3 -->
-            <scope>provided</scope>
-        </dependency>
+		<dependency>
+			<groupId>org.eclipse.swt</groupId>
+			<artifactId>org.eclipse.swt.win32.win32.x86</artifactId>
+			<version>4.6.1</version> <!-- 4.7M3 -->
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.swt</groupId>
+			<artifactId>org.eclipse.swt.cocoa.macosx.x86_64</artifactId>
+			<version>4.6.1</version> <!-- 4.7M3 -->
+			<scope>provided</scope>
+		</dependency>
 	</dependencies>
 
 	<issueManagement>
