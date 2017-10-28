@@ -253,14 +253,7 @@ public class RoutingTableCanvas {
 			ver = "";
 		}else{
 			ByteBuffer bb = bucketEntry.getVersion().get();
-			//try
-			//{
-				byte[] raw = bb.array();
-				ver = Utils.prettyPrint(raw);
-			//} catch (UnsupportedEncodingException e1)
-			//{
-			//	e1.printStackTrace();
-			//}
+			ver = Utils.prettyPrint(bb);
 		}
 		
 
