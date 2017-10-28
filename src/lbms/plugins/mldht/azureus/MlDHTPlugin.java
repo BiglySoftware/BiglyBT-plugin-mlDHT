@@ -143,6 +143,7 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 		config_model.addBooleanParameter2("showStatusEntry",
 				"mldht.showStatusEntry", true);
 		config_model.addBooleanParameter2("multihoming", "mldht.multihoming", false);
+		config_model.addBooleanParameter2("multihoming6", "mldht.multihoming6", true);
 
 		view_model = ui_manager.createBasicPluginViewModel("Mainline DHT Log");
 
@@ -582,73 +583,6 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 						return;
 					}
 
-					DHTConfiguration config = new DHTConfiguration() {
-						@Override
-						public boolean noRouterBootstrap() {
-							return pluginInterface.getPluginconfig()
-									.getPluginBooleanParameter(
-											"onlyPeerBootstrap");
-						}
-
-						@Override
-						public boolean isPersistingID() {
-							return pluginInterface.getPluginconfig().getPluginBooleanParameter("alwaysRestoreID");
-						}
-
-						@Override
-						public Path getStoragePath() {
-							return pluginInterface.getPluginconfig().getPluginUserFile("tmp.tmp").getParentFile().toPath();
-						}
-
-						@Override
-						public int getListeningPort() {
-							return pluginInterface.getPluginconfig().getPluginIntParameter("port");
-						}
-
-						@Override
-						public boolean allowMultiHoming() {
-							return pluginInterface.getPluginconfig().getPluginBooleanParameter("multihoming");
-						}
-						
-						public Predicate<InetAddress> filterBindAddress() {
-							return( new Predicate<InetAddress>() {
-								@Override
-								public boolean test(InetAddress t) {
-									InetAddress[] allBindAddresses = NetworkAdmin.getSingleton().getAllBindAddresses(true);
-								
-									boolean	result = false;
-									
-										// when there are no bindings 'all bind addresses' doesn't return both v4+v6 any addresses, it just returns one
-										// currently match both to this, if a user requires,
-									if ( t.isAnyLocalAddress()){
-										for ( InetAddress a: allBindAddresses ) {
-											if ( a.isAnyLocalAddress()) {
-												result = true;
-												break;
-											}
-										}
-									}else {
-										for ( InetAddress a: allBindAddresses ) {
-											if ( a.equals( t )) {
-												
-												result = true;
-												break;
-											}
-										}
-									}
-									/*
-									String curr = "";
-									for ( InetAddress a: allBindAddresses ) {
-										curr += (curr == ""?"":",") + a;
-										
-									}
-									System.out.println( "PREDICATE: " + t+ " - " + curr + " -> " + result );
-									*/
-									return( result );
-								}
-							});
-						}
-					};
 
 					try{
 						alt_contact_handler = new AlternativeContactHandler();
@@ -660,6 +594,78 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 					view_model.getStatus().setText("Initializing");
 					try {
 						for (Map.Entry<DHTtype, DHT> e : dhts.entrySet()) {
+							
+							DHTtype type = e.getKey();
+							
+							DHTConfiguration config = new DHTConfiguration() {
+								@Override
+								public boolean noRouterBootstrap() {
+									return pluginInterface.getPluginconfig()
+											.getPluginBooleanParameter(
+													"onlyPeerBootstrap");
+								}
+
+								@Override
+								public boolean isPersistingID() {
+									return pluginInterface.getPluginconfig().getPluginBooleanParameter("alwaysRestoreID");
+								}
+
+								@Override
+								public Path getStoragePath() {
+									return pluginInterface.getPluginconfig().getPluginUserFile("tmp.tmp").getParentFile().toPath();
+								}
+
+								@Override
+								public int getListeningPort() {
+									return pluginInterface.getPluginconfig().getPluginIntParameter("port");
+								}
+
+								@Override
+								public boolean allowMultiHoming() {
+									return pluginInterface.getPluginconfig().getPluginBooleanParameter(type == DHTtype.IPV4_DHT ? "multihoming" : "multihoming6");
+								}
+								
+								public Predicate<InetAddress> filterBindAddress() {
+									return( new Predicate<InetAddress>() {
+										@Override
+										public boolean test(InetAddress t) {
+											InetAddress[] allBindAddresses = NetworkAdmin.getSingleton().getAllBindAddresses(true);
+										
+											boolean	result = false;
+											
+												// when there are no bindings 'all bind addresses' doesn't return both v4+v6 any addresses, it just returns one
+												// currently match both to this, if a user requires,
+											if ( t.isAnyLocalAddress()){
+												for ( InetAddress a: allBindAddresses ) {
+													if ( a.isAnyLocalAddress()) {
+														result = true;
+														break;
+													}
+												}
+											}else {
+												for ( InetAddress a: allBindAddresses ) {
+													if ( a.equals( t )) {
+														
+														result = true;
+														break;
+													}
+												}
+											}
+											/*
+											String curr = "";
+											for ( InetAddress a: allBindAddresses ) {
+												curr += (curr == ""?"":",") + a;
+												
+											}
+											System.out.println( "PREDICATE: " + t+ " - " + curr + " -> " + result );
+											*/
+											return( result );
+										}
+									});
+								}
+							};
+
+							
 							e.getValue().start(config);
 						}
 
