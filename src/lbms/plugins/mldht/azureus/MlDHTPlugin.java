@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Predicate;
 
@@ -36,6 +37,7 @@ import lbms.plugins.mldht.DHTConfiguration;
 import lbms.plugins.mldht.kad.DHT;
 import lbms.plugins.mldht.kad.DHTConstants;
 import lbms.plugins.mldht.kad.DHTLogger;
+import lbms.plugins.mldht.kad.RPCServerManager;
 import lbms.plugins.mldht.kad.DHT.DHTtype;
 import lbms.plugins.mldht.kad.DHT.IncomingMessageListener;
 import lbms.plugins.mldht.kad.DHT.LogLevel;
@@ -718,7 +720,7 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 	@Override
 	public void propertyChanged(String property) {
 		for (DHT dht : dhts.values()) {
-			dht.getServerManager().doBindChecks();
+			Optional.ofNullable(dht.getServerManager()).ifPresent(RPCServerManager::doBindChecks);
 		}
 	}
 }
