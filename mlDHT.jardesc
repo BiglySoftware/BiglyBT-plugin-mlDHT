@@ -11,10 +11,9 @@
         </sealing>
     </manifest>
     <selectedElements exportClassFiles="true" exportJavaFiles="true" exportOutputFolder="false">
-        <javaElement handleIdentifier="=the8472_mldht/src"/>
-        <javaElement handleIdentifier="=mlDHT/&lt;lbms.plugins.mldht.azureus"/>
         <javaElement handleIdentifier="=ed25519-java/src"/>
-        <javaElement handleIdentifier="=mlDHT/&lt;lbms.plugins.mldht"/>
-        <javaElement handleIdentifier="=mlDHT/&lt;lbms.plugins.mldht.azureus.gui"/>
+        <javaElement handleIdentifier="=the8472_real_mldht/src"/>
+        <javaElement handleIdentifier="=mlDHT/src&lt;lbms.plugins.mldht.azureus.gui"/>
+        <javaElement handleIdentifier="=mlDHT/src&lt;lbms.plugins.mldht.azureus"/>
     </selectedElements>
 </jardesc>
