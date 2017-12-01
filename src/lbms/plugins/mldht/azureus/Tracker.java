@@ -180,16 +180,19 @@ public class Tracker {
 							KBucketEntry 		entry,
 							PeerAddressDBItem 	item )
 						{
-							if ( interim_items.size() >= 200 ){
+							synchronized( interiming ){
 								
-								return;
-							}
+								if ( interim_items.size() >= 200 ){
+									
+									return;
+								}
+								
+								interim_items.add( item );
 							
-							interim_items.add( item );
-							
-							synchronized( interiming ) {
 								if ( !( interiming[0] || done[0] )) {
+									
 									interiming[0] = true;
+									
 									new AEThread2("mlDHT:interim" )
 									{
 										@Override
@@ -201,9 +204,12 @@ public class Tracker {
 											}catch( Throwable e ) {
 												
 											}
-											synchronized( interiming ) {
-												if ( !done[0] ) {
+											synchronized( interiming ){
+												
+												if ( !done[0] ){
+													
 													interiming[0] = false;
+													
 													DHTAnnounceResult res = new DHTAnnounceResult( dl, interim_items, 0);
 													
 													dl.setAnnounceResult(res);
