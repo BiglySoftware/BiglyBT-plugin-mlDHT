@@ -592,9 +592,10 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 					
 						
 					view_model.getStatus().setText("Initializing");
-					try {
-						for (Map.Entry<DHTtype, DHT> e : dhts.entrySet()) {
-							
+					
+					for (Map.Entry<DHTtype, DHT> e : dhts.entrySet()) {
+					
+						try{
 							DHTtype type = e.getKey();
 							
 							DHTConfiguration config = new DHTConfiguration() {
@@ -604,22 +605,22 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 											.getPluginBooleanParameter(
 													"onlyPeerBootstrap");
 								}
-
+	
 								@Override
 								public boolean isPersistingID() {
 									return pluginInterface.getPluginconfig().getPluginBooleanParameter("alwaysRestoreID");
 								}
-
+	
 								@Override
 								public Path getStoragePath() {
 									return pluginInterface.getPluginconfig().getPluginUserFile("tmp.tmp").getParentFile().toPath();
 								}
-
+	
 								@Override
 								public int getListeningPort() {
 									return pluginInterface.getPluginconfig().getPluginIntParameter("port");
 								}
-
+	
 								@Override
 								public boolean allowMultiHoming() {
 									return pluginInterface.getPluginconfig().getPluginBooleanParameter(type == DHTtype.IPV4_DHT ? "multihoming" : "multihoming6");
@@ -664,16 +665,18 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 									});
 								}
 							};
-
+	
 							
 							e.getValue().start(config);
+							
+						} catch (SocketException t) {
+							t.printStackTrace();
 						}
-
-						tracker.start();
-						view_model.getStatus().setText("Running");
-					} catch (SocketException e) {
-						e.printStackTrace();
 					}
+
+					tracker.start();
+					view_model.getStatus().setText("Running");
+
 				}
 			});
 	}
