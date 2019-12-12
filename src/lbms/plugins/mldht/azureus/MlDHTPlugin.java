@@ -669,7 +669,7 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 							
 							e.getValue().start(config);
 							
-						} catch (SocketException t) {
+						} catch (Throwable  t) {
 							t.printStackTrace();
 						}
 					}
