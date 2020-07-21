@@ -227,10 +227,12 @@ public class Tracker {
 				{ // initializer
 					(scrapeOnly ? currentScrapes : currentAnnounces).add(dl);
 					
+					byte[] hash = dl.getTorrent().getHash();
+					
 					for(DHTtype type : DHTtype.values())
 					{
 						DHT dht = plugin.getDHT(type);
-						PeerLookupTask lookupTask = dht.createPeerLookup(dl.getTorrent().getHash());
+						PeerLookupTask lookupTask = dht.createPeerLookup( hash );
 						if (lookupTask != null) {
 							pendingCount.incrementAndGet();
 							lookupTask.setScrapeHandler(scrapeHandler);
@@ -244,6 +246,12 @@ public class Tracker {
 						}
 					}
 
+					if ( pendingCount.get() == 0 ){
+						
+							// no tasks created, we need to trigger completion otherwise the torrent will be 'stuck'
+						
+						allFinished(hash);
+					}
 				}
 				
 				@Override
