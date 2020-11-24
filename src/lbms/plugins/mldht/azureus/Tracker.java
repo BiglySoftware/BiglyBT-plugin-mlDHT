@@ -54,6 +54,7 @@ public class Tracker {
 
 	public static final int					SHORT_DELAY					= 60 * 1000;
 	public static final int					VERY_SHORT_DELAY			= 5 * 1000;
+	public static final int					METADATA_ANNOUNCE_DELAY		= 30 * 1000;
 
 	public static final int					MIN_ANNOUNCE_INTERVAL		= 5 * 60 * 1000;
 	//actually MIN is added to this
@@ -361,7 +362,14 @@ public class Tracker {
 					}
 				}else{
 					
-					delay = MIN_ANNOUNCE_INTERVAL + random.nextInt(MAX_ANNOUNCE_INTERVAL);
+					if ( dl.getFlag( Download.FLAG_METADATA_DOWNLOAD )){
+						
+						delay = METADATA_ANNOUNCE_DELAY;
+						
+					}else{
+					
+						delay = MIN_ANNOUNCE_INTERVAL + random.nextInt(MAX_ANNOUNCE_INTERVAL);
+					}
 				}
 			}
 			
