@@ -250,6 +250,9 @@ public class Tracker {
 					for(DHTtype type : DHTtype.values())
 					{
 						DHT dht = plugin.getDHT(type);
+						if (dht == null) {
+							continue;
+						}
 						PeerLookupTask lookupTask = dht.createPeerLookup( hash );
 						if (lookupTask != null) {
 							pendingCount.incrementAndGet();

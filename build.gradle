@@ -1,0 +1,34 @@
+apply plugin: 'java-library'
+
+// Build for Android (No SWT)
+
+compileJava.options.encoding = "UTF-8"
+
+sourceSets {
+    main {
+        java {
+            srcDirs = [
+                    'src'
+            ]
+            exclude 'lbms/plugins/mldht/azureus/gui/**'
+        }
+
+        resources {
+            includes = ['**/*.properties']
+            srcDirs = [
+                    'src'
+            ]
+        }
+    }
+}
+
+dependencies {
+    implementation project(path: ':core')
+    // https://github.com/BiglySoftware/BiglyBT-plugin-mlDHT.git  branch: android
+    implementation project(path: ':mldht')
+}
+
+java {
+    sourceCompatibility JavaVersion.VERSION_1_8
+    targetCompatibility JavaVersion.VERSION_1_8
+}

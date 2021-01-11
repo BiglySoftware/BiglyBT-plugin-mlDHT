@@ -16,13 +16,9 @@
  */
 package lbms.plugins.mldht.azureus;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import java.io.*;
 import java.net.InetAddress;
-import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -211,9 +207,12 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 		
 		DHTConstants.setVersion(parsedVersion);
 		
+		dhts.put(DHTtype.IPV4_DHT, new DHT(DHTtype.IPV4_DHT));
+		/* Android: Disable IPV6
 		Arrays.asList(DHT.DHTtype.values()).stream().forEach(type -> {
 			dhts.put(type, new DHT(type));
 		});
+		 */
 		
 		List<DHT> listDHTs = new ArrayList<>( dhts.values());
 		
@@ -624,8 +623,12 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 								}
 	
 								@Override
-								public Path getStoragePath() {
-									return pluginInterface.getPluginconfig().getPluginUserFile("tmp.tmp").getParentFile().toPath();
+								public File getStoragePath() {
+									
+									File parentFile = pluginInterface.getPluginconfig()
+											.getPluginUserFile("tmp.tmp")
+											.getParentFile();
+									return parentFile;
 								}
 	
 								@Override
