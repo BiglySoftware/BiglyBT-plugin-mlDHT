@@ -230,7 +230,8 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 				}
 			}
 		};
-				
+
+		//noinspection newapi java-support-table says List.forEach is desugared
 		listDHTs.forEach(d -> {
 			d.setScheduler(executor);
 			d.addSiblings(listDHTs);
