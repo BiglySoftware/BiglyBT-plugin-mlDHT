@@ -32,6 +32,10 @@ import lbms.plugins.mldht.kad.tasks.TaskListener;
 import com.biglybt.core.util.AERunnable;
 import com.biglybt.core.util.AEThread2;
 import com.biglybt.core.util.AsyncDispatcher;
+import com.biglybt.core.util.SimpleTimer;
+import com.biglybt.core.util.SystemTime;
+import com.biglybt.core.util.TimerEvent;
+import com.biglybt.core.util.TimerEventPerformer;
 import com.biglybt.pif.download.Download;
 import com.biglybt.pif.download.DownloadAnnounceResult;
 import com.biglybt.pif.download.DownloadAttributeListener;
@@ -168,6 +172,9 @@ public class Tracker {
 				final boolean[] done = {false};
 				final boolean[] interiming = {false};
 				
+				boolean allFinished = false;
+				final TimerEvent	timeoutEvent;
+				
 				BiConsumer<KBucketEntry,PeerAddressDBItem> announceHandler =
 					(scrapeOnly||tor==null||tor.getAnnounceCount()>1)?
 					null:
@@ -251,7 +258,22 @@ public class Tracker {
 						
 							// no tasks created, we need to trigger completion otherwise the torrent will be 'stuck'
 						
-						allFinished(hash);
+						allFinished( hash );
+						
+						timeoutEvent = null;
+					}else{
+						
+							// reports of announces getting stuck when network goes down - added timeout
+							// hack
+						
+						timeoutEvent = 
+							SimpleTimer.addEvent( 
+								"mlDHT:tt", 
+								SystemTime.getOffsetTime( 15*60*1000 ),
+								(ev)->{
+									DHT.logInfo("DHT Announce timeout for " + dl.getName());
+									allFinished( hash );
+								});
 					}
 				}
 				
@@ -282,8 +304,18 @@ public class Tracker {
 					}
 				}
 				
-				private void allFinished(byte[] hash)
+				private void 
+				allFinished(byte[] hash)
 				{
+					synchronized( interiming ){
+						if ( allFinished ){
+							return;
+						}
+						allFinished = true;
+						if ( timeoutEvent != null ){
+							timeoutEvent.cancel();
+						}
+					}
 					scrapeHandler.process();
 					
 					currentAnnounces.remove(dl);
