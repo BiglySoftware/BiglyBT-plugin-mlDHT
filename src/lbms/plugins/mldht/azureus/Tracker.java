@@ -35,7 +35,6 @@ import com.biglybt.core.util.AsyncDispatcher;
 import com.biglybt.core.util.SimpleTimer;
 import com.biglybt.core.util.SystemTime;
 import com.biglybt.core.util.TimerEvent;
-import com.biglybt.core.util.TimerEventPerformer;
 import com.biglybt.pif.download.Download;
 import com.biglybt.pif.download.DownloadAnnounceResult;
 import com.biglybt.pif.download.DownloadAttributeListener;
@@ -123,7 +122,9 @@ public class Tracker {
 			timer.cancel(false);
 		}
 		announceQueue.clear();
-		trackedTorrents.clear();
+		synchronized( trackedTorrents ){
+			trackedTorrents.clear();
+		}
 		plugin.getPluginInterface().getDownloadManager().removeListener(listener);
 		Download[] downloads = plugin.getPluginInterface().getDownloadManager().getDownloads();
 		for (Download dl : downloads) {
@@ -144,27 +145,34 @@ public class Tracker {
 						+ "] forbidden because Torrent is private.");
 				return;
 			}
-			if (trackedTorrents.containsKey(dl)) {
-				if (trackedTorrents.get(dl).isAnnouncing()) {
-					DHT.logDebug("Announce for ["
-							+ dl.getName()
-							+ "] was denied since there is already one running.");
-					return;
-				}
-			}
-			DHT.logInfo("DHT Starting Announce for " + dl.getName());
-			
 			
 			final long startTime = System.currentTimeMillis();
-			final TrackedTorrent tor = trackedTorrents.get(dl);
+
+			final TrackedTorrent tor;
+			final boolean scrapeOnly;
 			
-			if (tor != null) {
-				tor.setAnnouncing(true);
-				tor.setLastAnnounceStart(startTime);
+			synchronized( trackedTorrents ){
+				tor = trackedTorrents.get(dl);
+				if ( tor != null ) {
+					if (tor.isAnnouncing()) {
+						DHT.logDebug("Announce for ["
+								+ dl.getName()
+								+ "] was denied since there is already one running.");
+						return;
+					}
+				}
+				
+				DHT.logInfo("DHT Starting Announce for " + dl.getName());
+												
+				if (tor != null) {
+					tor.setAnnouncing(true);
+					tor.setLastAnnounceStart(startTime);
+				}
+				
+				scrapeOnly = dl.getState() == Download.ST_QUEUED;
+				
+				(scrapeOnly ? currentScrapes : currentAnnounces).add(dl);
 			}
-			
-			final boolean scrapeOnly = dl.getState() == Download.ST_QUEUED;
-			
 			
 			new TaskListener() {
 				Set<PeerAddressDBItem> items = new HashSet<>();
@@ -232,9 +240,7 @@ public class Tracker {
 				
 				AtomicInteger pendingCount = new AtomicInteger();
 				
-				{ // initializer
-					(scrapeOnly ? currentScrapes : currentAnnounces).add(dl);
-					
+				{ // initializer					
 					byte[] hash = dl.getTorrent().getHash();
 					
 					for(DHTtype type : DHTtype.values())
@@ -258,7 +264,7 @@ public class Tracker {
 						
 							// no tasks created, we need to trigger completion otherwise the torrent will be 'stuck'
 						
-						allFinished( hash );
+						allFinished();
 						
 						timeoutEvent = null;
 					}else{
@@ -272,7 +278,7 @@ public class Tracker {
 								SystemTime.getOffsetTime( 15*60*1000 ),
 								(ev)->{
 									DHT.logInfo("DHT Announce timeout for " + dl.getName());
-									allFinished( hash );
+									allFinished();
 								});
 					}
 				}
@@ -300,12 +306,12 @@ public class Tracker {
 						
 						if(pendingCount.decrementAndGet() > 0)
 							return;
-						allFinished(peerLookup.getInfoHash().getHash());
+						allFinished();
 					}
 				}
 				
 				private void 
-				allFinished(byte[] hash)
+				allFinished()
 				{
 					synchronized( interiming ){
 						if ( allFinished ){
@@ -318,11 +324,13 @@ public class Tracker {
 					}
 					scrapeHandler.process();
 					
-					currentAnnounces.remove(dl);
-					currentScrapes.remove(dl);
-					
-					if (tor != null) {
-						tor.setAnnouncing(false);
+					synchronized( trackedTorrents ){
+						currentAnnounces.remove(dl);
+						currentScrapes.remove(dl);
+						
+						if (tor != null) {
+							tor.setAnnouncing(false);
+						}
 					}
 					
 					// schedule the next announce (will be ignored if there is one pending)
@@ -357,9 +365,15 @@ public class Tracker {
 			return;
 		}
 		
-		if (trackedTorrents.containsKey(dl)) {
-			TrackedTorrent t = trackedTorrents.get(dl);
+		TrackedTorrent t;
+		
+		synchronized( trackedTorrents ){
 			
+			t = trackedTorrents.get(dl);
+		}
+		
+		if ( t != null ){
+						
 			Queue<TrackedTorrent> targetQueue;
 			int delay;
 			
@@ -455,25 +469,48 @@ public class Tracker {
 		if (!running) {
 			return;
 		}
-		TrackedTorrent t;
-		Download dl;
 
-		while (currentAnnounces.size() < MAX_CONCURRENT_ANNOUNCES && (t = announceQueue.poll()) != null) {
-			dl = t.getDownload();
-			if (trackedTorrents.containsKey(dl)	&& trackedTorrents.get(dl).isAnnouncing())
+		while ( true ){
+			synchronized( trackedTorrents ){
+				if ( currentAnnounces.size() >= MAX_CONCURRENT_ANNOUNCES ){
+					break;
+				}
+			}
+			
+			TrackedTorrent t = announceQueue.poll();
+			
+			if ( t == null ){
+				break;
+			}
+		
+			Download dl = t.getDownload();
+			if ( t.isAnnouncing()){
 				scheduleTorrent(dl, false);
-			else
+			}else{
 				announceDownload(dl);
+			}
 		}
 		
-		while (currentScrapes.size() < MAX_CONCURRENT_SCRAPES && (t = scrapeQueue.poll()) != null) {
-			dl = t.getDownload();
-			if (trackedTorrents.containsKey(dl)	&& trackedTorrents.get(dl).isAnnouncing())
+		while ( true ){
+			synchronized( trackedTorrents ){
+				if ( currentScrapes.size() >= MAX_CONCURRENT_SCRAPES ){
+					break;
+				}
+			}
+			
+			TrackedTorrent t = scrapeQueue.poll();
+			
+			if ( t == null ){
+				break;
+			}
+		
+			Download dl = t.getDownload();
+			if ( t.isAnnouncing()){
 				scheduleTorrent(dl, false);
-			else
+			}else{
 				announceDownload(dl);
+			}
 		}
-
 	}
 
 	private void checkDownload (Download dl) {
@@ -513,9 +550,16 @@ public class Tracker {
 			return;
 		}
 		
-		TrackedTorrent tor = trackedTorrents.get(dl);
+		final TrackedTorrent tor;
+		
+		synchronized( trackedTorrents ){
+			
+			tor = trackedTorrents.get(dl);
+		}
 
-		if (dl.getState() == Download.ST_DOWNLOADING || dl.getState() == Download.ST_SEEDING) {
+		int state = dl.getState();
+		
+		if (state == Download.ST_DOWNLOADING || state == Download.ST_SEEDING) {
 
 			 if ( !dl.getFlag( Download.FLAG_METADATA_DOWNLOAD )){
 				//only act as backup tracker
@@ -534,7 +578,7 @@ public class Tracker {
 
 			addTrackedTorrent(dl, "Normal");
 
-		} else if(dl.getState() == Download.ST_QUEUED) {
+		} else if(state == Download.ST_QUEUED) {
 			
 			// handle scrapes if regular scrapes failed or it's only dht-tracked
 			DownloadScrapeResult scrResult = dl.getLastScrapeResult();
@@ -548,36 +592,43 @@ public class Tracker {
 			}
 
 		} else {
-			removeTrackedTorrent(dl, "Has stopped Downloading/Seeding");
+			removeTrackedTorrent(dl, "Has stopped Downloading/Seeding (state=" + state + ")");
 		}
 
 
 	}
 
 	private void addTrackedTorrent (Download dl, String reason) {
-		if (!trackedTorrents.containsKey(dl)) {
+		synchronized( trackedTorrents ){
+			if (trackedTorrents.containsKey(dl)) {
+				return;
+			}
+			
 			DHT.logInfo("Tracker: starting to track Torrent reason: " + reason
-					+ ", Torrent; " + dl.getName());
+						+ ", Torrent; " + dl.getName());
 			trackedTorrents.put(dl, new TrackedTorrent(dl));
-			scheduleTorrent(dl, true);
 		}
+		
+		scheduleTorrent(dl, true);
 	}
 
 	private void removeTrackedTorrent (Download dl, String reason) {
-		if (trackedTorrents.containsKey(dl)) {
-			DHT.logInfo("Tracker: stop tracking of Torrent reason: " + reason
-					+ ", Torrent; " + dl.getName());
-			TrackedTorrent tracked = trackedTorrents.get(dl);
-			
-			announceQueue.remove(tracked);
-			scrapeQueue.remove(tracked);
-			trackedTorrents.remove(dl);
-			
+		synchronized( trackedTorrents ){
+			TrackedTorrent tracked = trackedTorrents.remove(dl);
+			if ( tracked != null ) {
+				DHT.logInfo("Tracker: stop tracking of Torrent reason: " + reason
+						+ ", Torrent; " + dl.getName());
+							
+				announceQueue.remove(tracked);
+				scrapeQueue.remove(tracked);
+			}
 		}
 	}
 
 	public List<TrackedTorrent> getTrackedTorrentList () {
-		return new ArrayList<>(trackedTorrents.values());
+		synchronized( trackedTorrents ){
+			return new ArrayList<>(trackedTorrents.values());
+		}
 	}
 
 
