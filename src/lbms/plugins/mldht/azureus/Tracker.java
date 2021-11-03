@@ -264,7 +264,7 @@ public class Tracker {
 						
 							// no tasks created, we need to trigger completion otherwise the torrent will be 'stuck'
 						
-						allFinished();
+						allFinished( false );
 						
 						timeoutEvent = null;
 					}else{
@@ -278,7 +278,7 @@ public class Tracker {
 								SystemTime.getOffsetTime( 15*60*1000 ),
 								(ev)->{
 									DHT.logInfo("DHT Announce timeout for " + dl.getName());
-									allFinished();
+									allFinished( false );
 								});
 					}
 				}
@@ -306,12 +306,12 @@ public class Tracker {
 						
 						if(pendingCount.decrementAndGet() > 0)
 							return;
-						allFinished();
+						allFinished( true );
 					}
 				}
 				
 				private void 
-				allFinished()
+				allFinished( boolean didSomething )
 				{
 					synchronized( interiming ){
 						if ( allFinished ){
@@ -336,12 +336,15 @@ public class Tracker {
 					// schedule the next announce (will be ignored if there is one pending)
 					scheduleTorrent(dl, false);
 					
-					if (!scrapeOnly && items.size() > 0) {
-						DHTAnnounceResult res = new DHTAnnounceResult(dl, items, tor != null ? (int) tor.getDelay(TimeUnit.SECONDS) : 0);
-						res.setScrapePeers(scrapeHandler.getScrapedPeers());
-						res.setScrapeSeeds(scrapeHandler.getScrapedSeeds());
+					if (!scrapeOnly ){ // parg: removed this as hopefully multiple announce sources are handled better these days... && items.size() > 0) {
 						
-						dl.setAnnounceResult(res);
+						if ( items.size() > 0 || didSomething ){
+							DHTAnnounceResult res = new DHTAnnounceResult(dl, items, tor != null ? (int) tor.getDelay(TimeUnit.SECONDS) : 0);
+							res.setScrapePeers(scrapeHandler.getScrapedPeers());
+							res.setScrapeSeeds(scrapeHandler.getScrapedSeeds());
+							
+							dl.setAnnounceResult(res);
+						}
 					}
 					
 					if(scrapeOnly && (scrapeHandler.getScrapedPeers() > 0 || scrapeHandler.getScrapedSeeds() > 0))
