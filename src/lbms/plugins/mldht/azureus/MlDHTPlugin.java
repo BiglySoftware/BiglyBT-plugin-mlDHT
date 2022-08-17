@@ -131,6 +131,11 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 		config_model.addIntParameter2("port", "mldht.port", 49001);
 
 		for (DHTtype type : DHTtype.values()) {
+			config_model.addBooleanParameter2("autostart." + type.shortName,
+					("mldht.autostart." + type.shortName).toLowerCase(), true);
+		}
+		
+		for (DHTtype type : DHTtype.values()) {
 			config_model.addBooleanParameter2("autoopen." + type.shortName,
 					("mldht.autoopen." + type.shortName).toLowerCase(), false);
 		}
@@ -551,7 +556,7 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 				@Override
 				public void run () {
 					try{
-						startDHT();
+						startDHT( true );
 				
 					}catch( Throwable e ){
 						e.printStackTrace();
@@ -570,7 +575,7 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 	
 	private AsyncDispatcher	dispatcher = new AsyncDispatcher( "MLDHT:disp", 2500 );
 	
-	public void startDHT () {
+	public void startDHT ( boolean initial ) {
 		
 		dispatcher.dispatch(
 			new AERunnable() {
@@ -597,6 +602,11 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 					
 						try{
 							DHTtype type = e.getKey();
+							
+							if ( initial && !pluginInterface.getPluginconfig().getPluginBooleanParameter( "autostart." + type.shortName )){
+								
+								continue;
+							}
 							
 							DHTConfiguration config = new DHTConfiguration() {
 								@Override

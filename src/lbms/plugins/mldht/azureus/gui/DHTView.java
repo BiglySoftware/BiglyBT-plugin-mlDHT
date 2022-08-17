@@ -317,11 +317,12 @@ public class DHTView implements UISWTViewEventListener {
 			 */
 			@Override
 			public void widgetSelected (SelectionEvent e) {
+				// currently this starts and stops ALL dhts, not just this one...
 				if (plugin.getDHT(type).isRunning()) {
 					plugin.stopDHT();
 					deactivate();
 				} else {
-					plugin.startDHT();
+					plugin.startDHT(false);
 					activate();
 				}
 				updateDHTRunStatus();
@@ -714,7 +715,7 @@ public class DHTView implements UISWTViewEventListener {
 		}
 		plugin.getDHT(type).removeStatsListener(dhtStatsListener);
 		rtc.setNode(null);
-
+		updateDHTRunStatus();
 		isActivated = false;
 	}
 
@@ -734,19 +735,22 @@ public class DHTView implements UISWTViewEventListener {
 			isCreated = true;
 			break;
 
-		case UISWTViewEvent.TYPE_FOCUSGAINED:
+		case UISWTViewEvent.TYPE_SHOWN:
 			activate();
 			break;
 
-		case UISWTViewEvent.TYPE_FOCUSLOST:
+		case UISWTViewEvent.TYPE_HIDDEN:
 			deactivate();
 			break;
-
+		case UISWTViewEvent.TYPE_REFRESH:
+			if ( isRunning != plugin.getDHT(type).isRunning()){
+				updateDHTRunStatus();
+			}
+			break;
 		case UISWTViewEvent.TYPE_INITIALIZE:
 			initialize((Composite) event.getData());
 			break;
 
-		case UISWTViewEvent.TYPE_CLOSE:
 		case UISWTViewEvent.TYPE_DESTROY:
 			delete();
 			break;

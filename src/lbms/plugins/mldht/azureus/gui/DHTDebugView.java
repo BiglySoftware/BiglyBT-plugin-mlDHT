@@ -59,11 +59,11 @@ public class DHTDebugView implements UISWTViewEventListener{
 			isCreated = true;
 			break;
 
-		case UISWTViewEvent.TYPE_FOCUSGAINED:
+		case UISWTViewEvent.TYPE_SHOWN:
 			activate();
 			break;
 
-		case UISWTViewEvent.TYPE_FOCUSLOST:
+		case UISWTViewEvent.TYPE_HIDDEN:
 			deactivate();
 			break;
 
@@ -71,7 +71,6 @@ public class DHTDebugView implements UISWTViewEventListener{
 			initialize((Composite) event.getData());
 			break;
 
-		case UISWTViewEvent.TYPE_CLOSE:
 		case UISWTViewEvent.TYPE_DESTROY:
 			delete();
 			break;
