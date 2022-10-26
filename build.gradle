@@ -16,9 +16,6 @@ android {
         multiDexEnabled true
     }
 
-    lintOptions {
-        abortOnError false
-    }
 
     compileOptions {
         coreLibraryDesugaringEnabled true
@@ -44,6 +41,10 @@ android {
                 ]
             }
         }
+    }
+    namespace 'lbms.plugins.mldht.azureus'
+    lint {
+        abortOnError false
     }
 }
 
