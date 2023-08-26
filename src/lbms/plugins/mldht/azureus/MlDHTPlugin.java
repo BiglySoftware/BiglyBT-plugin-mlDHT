@@ -16,9 +16,14 @@
  */
 package lbms.plugins.mldht.azureus;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.net.InetAddress;
+import java.net.SocketException;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -128,6 +133,7 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 		config_model.addBooleanParameter2("enable", "mldht.enable", true);
 		config_model.addIntParameter2("port", "mldht.port", 49001);
 
+		/* Android: No Views
 		for (DHTtype type : DHTtype.values()) {
 			config_model.addBooleanParameter2("autostart." + type.shortName,
 					("mldht.autostart." + type.shortName).toLowerCase(), true);
@@ -137,6 +143,7 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 			config_model.addBooleanParameter2("autoopen." + type.shortName,
 					("mldht.autoopen." + type.shortName).toLowerCase(), false);
 		}
+		*/
 		config_model.addBooleanParameter2("backupOnly", "mldht.backupOnly",
 				false);
 		config_model.addBooleanParameter2("onlyPeerBootstrap",
@@ -231,7 +238,6 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 			}
 		};
 
-		//noinspection newapi java-support-table says List.forEach is desugared
 		listDHTs.forEach(d -> {
 			d.setScheduler(executor);
 			d.addSiblings(listDHTs);
@@ -624,12 +630,8 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 								}
 	
 								@Override
-								public File getStoragePath() {
-									
-									File parentFile = pluginInterface.getPluginconfig()
-											.getPluginUserFile("tmp.tmp")
-											.getParentFile();
-									return parentFile;
+								public Path getStoragePath() {
+									return pluginInterface.getPluginconfig().getPluginUserFile("tmp.tmp").getParentFile().toPath();
 								}
 	
 								@Override
