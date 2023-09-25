@@ -162,15 +162,15 @@ public class Tracker {
 					}
 				}
 				
-				DHT.logInfo("DHT Starting Announce for " + dl.getName());
+				scrapeOnly = dl.getState() == Download.ST_QUEUED;
+
+				DHT.logInfo("DHT Starting Announce for " + dl.getName() + ", scrape=" + scrapeOnly + ", seeds=" + !dl.isComplete(true));
 												
 				if (tor != null) {
 					tor.setAnnouncing(true);
 					tor.setLastAnnounceStart(startTime);
 				}
-				
-				scrapeOnly = dl.getState() == Download.ST_QUEUED;
-				
+								
 				(scrapeOnly ? currentScrapes : currentAnnounces).add(dl);
 			}
 			
