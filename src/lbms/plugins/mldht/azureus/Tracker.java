@@ -29,6 +29,9 @@ import lbms.plugins.mldht.kad.tasks.PeerLookupTask;
 import lbms.plugins.mldht.kad.tasks.Task;
 import lbms.plugins.mldht.kad.tasks.TaskListener;
 
+import com.biglybt.core.download.DownloadManager;
+import com.biglybt.core.download.DownloadManagerState;
+import com.biglybt.core.download.DownloadManagerStateAttributeListener;
 import com.biglybt.core.util.AERunnable;
 import com.biglybt.core.util.AEThread2;
 import com.biglybt.core.util.AsyncDispatcher;
@@ -43,6 +46,7 @@ import com.biglybt.pif.download.DownloadManagerListener;
 import com.biglybt.pif.download.DownloadScrapeResult;
 import com.biglybt.pif.download.DownloadTrackerListener;
 import com.biglybt.pif.torrent.TorrentAttribute;
+import com.biglybt.pifimpl.local.PluginCoreUtils;
 
 /**
  * @author Damokles
@@ -162,7 +166,7 @@ public class Tracker {
 					}
 				}
 				
-				scrapeOnly = dl.getState() == Download.ST_QUEUED;
+				scrapeOnly = MlDHTPlugin.getEffectiveDownloadState( dl ) == Download.ST_QUEUED;
 
 				DHT.logInfo("DHT Starting Announce for " + dl.getName() + ", scrape=" + scrapeOnly + ", seeds=" + !dl.isComplete(true));
 												
@@ -560,7 +564,7 @@ public class Tracker {
 			tor = trackedTorrents.get(dl);
 		}
 
-		int state = dl.getState();
+		int state = MlDHTPlugin.getEffectiveDownloadState( dl );
 		
 		if (state == Download.ST_DOWNLOADING || state == Download.ST_SEEDING) {
 
@@ -594,7 +598,7 @@ public class Tracker {
 				removeTrackedTorrent(dl, "BackupScraper no longer needed");
 			}
 
-		} else {
+		} else if ( state == Download.ST_STOPPED || state == Download.ST_ERROR ){
 			removeTrackedTorrent(dl, "Has stopped Downloading/Seeding (state=" + state + ")");
 		}
 
@@ -639,13 +643,14 @@ public class Tracker {
 
 	private class ListenerBundle implements DownloadListener,
 	DownloadAttributeListener, DownloadTrackerListener,
-	DownloadManagerListener {
+	DownloadManagerListener, DownloadManagerStateAttributeListener {
 		
 		public void cleanup(Download download) {
-			download.removeAttributeListener(this, ta_networks,
-				DownloadAttributeListener.WRITTEN);
-			download.removeAttributeListener(this, ta_peer_sources,
-				DownloadAttributeListener.WRITTEN);
+			download.removeAttributeListener(this, ta_networks,	DownloadAttributeListener.WRITTEN);
+			download.removeAttributeListener(this, ta_peer_sources,	DownloadAttributeListener.WRITTEN);
+			
+			PluginCoreUtils.unwrap( download ).getDownloadState().removeListener( this, DownloadManagerState.AT_PLUGIN_OPTIONS, DownloadManagerStateAttributeListener.WRITTEN );
+
 			download.removeListener(this);
 			download.removeTrackerListener(this);
 		}
@@ -682,6 +687,11 @@ public class Tracker {
 			}
 
 		}
+		
+		@Override
+		public void attributeEventOccurred(DownloadManager download, String attribute, int event_type){
+			checkDownload( PluginCoreUtils.wrap( download ));
+		}
 
 		//---------------------[DownloadTrackerListener]---------------------------------
 		/* (non-Javadoc)
@@ -706,10 +716,11 @@ public class Tracker {
 		 */
 		@Override
 		public void downloadAdded (Download download) {
-			download.addAttributeListener(this, ta_networks,
-					DownloadAttributeListener.WRITTEN);
-			download.addAttributeListener(this, ta_peer_sources,
-					DownloadAttributeListener.WRITTEN);
+			download.addAttributeListener(this, ta_networks, DownloadAttributeListener.WRITTEN);
+			download.addAttributeListener(this, ta_peer_sources,DownloadAttributeListener.WRITTEN);
+			
+			PluginCoreUtils.unwrap( download ).getDownloadState().addListener( this, DownloadManagerState.AT_PLUGIN_OPTIONS, DownloadManagerStateAttributeListener.WRITTEN );
+			
 			download.addListener(this);
 			download.addTrackerListener(this);
 			checkDownload(download);

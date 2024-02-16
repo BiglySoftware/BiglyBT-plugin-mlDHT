@@ -20,12 +20,12 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.net.InetAddress;
-import java.net.SocketException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
@@ -67,7 +67,9 @@ import com.biglybt.pif.ui.tables.TableContextMenuItem;
 import com.biglybt.pif.ui.tables.TableManager;
 import com.biglybt.pif.ui.tables.TableRow;
 import com.biglybt.pif.utils.LocaleUtilities;
-
+import com.biglybt.pifimpl.local.PluginCoreUtils;
+import com.biglybt.core.download.DownloadManager;
+import com.biglybt.core.download.DownloadManagerState;
 import com.biglybt.core.networkmanager.admin.NetworkAdmin;
 import com.biglybt.core.networkmanager.admin.NetworkAdminPropertyChangeListener;
 import com.biglybt.plugin.upnp.UPnPPlugin;
@@ -741,5 +743,44 @@ public class MlDHTPlugin implements UnloadablePlugin, PluginListener, NetworkAdm
 		for (DHT dht : dhts.values()) {
 			Optional.ofNullable(dht.getServerManager()).ifPresent(RPCServerManager::doBindChecks);
 		}
+	}
+	
+	public static int
+	getEffectiveDownloadState(
+		Download		download )
+	{
+		int state = download.getState();
+		
+		if ( download.getFlag( Download.FLAG_METADATA_DOWNLOAD )){
+			
+			return( state );
+		}
+		
+		if ( state == Download.ST_DOWNLOADING || state == Download.ST_SEEDING ){
+			
+			DownloadManager core_dm = PluginCoreUtils.unwrap( download );
+			
+			if ( core_dm != null ){
+				
+				Map all_opts = core_dm.getDownloadState().getMapAttribute( DownloadManagerState.AT_PLUGIN_OPTIONS );
+				
+				if ( all_opts != null ){
+					
+					Map opts = (Map)all_opts.get( "mldht" );
+					
+					if ( opts != null ){
+						
+						Number e = (Number)opts.get( DownloadManagerState.AT_PO_ENABLE_ANNOUNCE );
+						
+						if ( e != null && e.intValue() == 0 ){
+
+							state = Download.ST_QUEUED;
+						}
+					}
+				}
+			}
+		}
+		
+		return( state );
 	}
 }

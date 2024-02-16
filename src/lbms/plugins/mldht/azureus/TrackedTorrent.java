@@ -94,7 +94,7 @@ public class TrackedTorrent implements Delayed {
 	}
 	
 	public boolean scrapeOnly() {
-		return download.getState() == Download.ST_QUEUED;
+		return MlDHTPlugin.getEffectiveDownloadState( download) == Download.ST_QUEUED;
 	}
 
 	/**
