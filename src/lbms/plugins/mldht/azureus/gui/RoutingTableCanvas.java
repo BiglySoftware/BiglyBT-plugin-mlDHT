@@ -283,7 +283,7 @@ public class RoutingTableCanvas {
 	}
 
 	private void printBackground (GC gc) {
-		gc.setBackground(display.getSystemColor(SWT.COLOR_WHITE));
+		gc.setBackground(canvas.getParent().getBackground());
 		gc.fillRectangle(img.getBounds());
 	}
 
