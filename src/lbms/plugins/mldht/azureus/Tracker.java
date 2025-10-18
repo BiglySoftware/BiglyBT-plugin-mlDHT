@@ -407,7 +407,7 @@ public class Tracker {
 						
 								// first announce for an incomplete download, let's get some urgency into this!
 							
-							delay = VERY_SHORT_DELAY + random.nextInt(VERY_SHORT_DELAY);
+							delay = 0;	// changed to 0, why delay at all when starting a download...
 						}else{
 						
 							delay = SHORT_DELAY + random.nextInt(SHORT_DELAY);
